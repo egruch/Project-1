@@ -1,0 +1,19 @@
+---
+title: "ST558 Project 1"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
+census_return <- httr::GET(APIurl)
+
+census_parsed <- jsonlite::fromJSON(rawToChar(census_return$content))
+
+census_data <- as_tibble(census_parsed)
+```
