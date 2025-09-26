@@ -7,20 +7,26 @@ editor: visual
 ```{r}
 library(tidyverse)
 ```
+
 Getting the usual process to work with a given URL
 
 ```{r}
-APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
-census_return <- httr::GET(APIurl)
+APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&for=state:09&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
 
-census_parsed <- jsonlite::fromJSON(rawToChar(census_return$content))
+# Helper function to take what is returned by GET() and turn it into a tibble
+api_tibble <- function(GET_output) {
+  census_parsed <- jsonlite::fromJSON(rawToChar(GET_output$content))
+  
+  colnames(census_parsed) <- census_parsed[1,]
+  census_parsed <- census_parsed[-1,]
+  return(as_tibble(census_parsed))
+}
 
-colnames(census_parsed) <- census_parsed[1,]
-census_parsed <- census_parsed[-1,]
-
-census_data <- as_tibble(census_parsed)
+api_tibble(httr::GET(APIurl))
 ```
+
 if else logic test
+
 ```{r}
 year = 2022
 num_var <- "PWGTP,MAR"
@@ -43,7 +49,7 @@ if (!is.numeric(year) | year < 2010 | year > 2022) {
 ```
 
 ```{r}
-call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var = "SEX") {
+call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var = "SEX", state = "09") {
   if (!is.numeric(year) | year < 2010 | year > 2022) {
   
     stop("year input invalid!") 
@@ -63,7 +69,15 @@ call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var =
     stop("entered more than one variable or an invaild varaible") 
     
   } else {
-  my_url <- paste0("https://api.census.gov/data/",year,"/acs/acs1/pums?get=",char_var,",",paste(num_vars,collapse =","),"&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+  my_url <- paste0("https://api.census.gov/data/",
+                   year,
+                   "/acs/acs1/pums?get=",
+                   char_var,
+                   ",",
+                   paste(num_vars,collapse =","),
+                   "&for=state:",
+                   state,
+                   "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
 }
 }
 ```
@@ -72,10 +86,20 @@ call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var =
 year <- 2022
 num_var <- "PWGTP,MAR"
 char_var <- "SEX"
-my_url <- paste0("https://api.census.gov/data/",year,"/acs/acs1/pums?get=",char_var,",",num_var,"&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+state <- "09"
+my_url <- paste0("https://api.census.gov/data/",
+                 year,
+                 "/acs/acs1/pums?get=",
+                 char_var,
+                 ",",
+                 num_var,
+                 "&for=state:",
+                 state,
+                 "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
 my_url
 
 ```
 
-
-
+```{r}
+api_tibble(httr::GET(my_url))
+```
