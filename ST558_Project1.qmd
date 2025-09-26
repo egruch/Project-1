@@ -7,7 +7,7 @@ editor: visual
 ```{r}
 library(tidyverse)
 ```
-
+Getting the usual process to work with a given URL
 
 ```{r}
 APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
@@ -15,5 +15,67 @@ census_return <- httr::GET(APIurl)
 
 census_parsed <- jsonlite::fromJSON(rawToChar(census_return$content))
 
+colnames(census_parsed) <- census_parsed[1,]
+census_parsed <- census_parsed[-1,]
+
 census_data <- as_tibble(census_parsed)
 ```
+if else logic test
+```{r}
+year = 2022
+num_var <- "PWGTP,MAR"
+num_var2 <- c("PWGTP", "MAR")
+char_var = "SEX"
+if (!is.numeric(year) | year < 2010 | year > 2022) {
+  "BAD1" 
+} else if (!is.element("PWGTP", num_var2)) {
+    "BAD2"
+} else if (length(num_var2) < 2) {
+  "BAD3"
+  } else if (char_var != "FER" & char_var != "HHL" & char_var != "HISPEED" &
+             char_var != "JWTRNS" & char_var != "SCH" & char_var != "SCHL" &
+             char_var != "SEX") {
+    "BAD3"
+  } else {
+  "yay"
+}
+
+```
+
+```{r}
+call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var = "SEX") {
+  if (!is.numeric(year) | year < 2010 | year > 2022) {
+  
+    stop("year input invalid!") 
+    
+  } else if (!is.element("PWGTP", num_vars)) {
+  
+    stop("numeric variables does not contain PWGTP") 
+    
+  } else if (length(num_vars) < 2) {
+    
+    stop("must enter more than one numeric variable")
+    
+  } else if (char_var != "FER" & char_var != "HHL" & char_var != "HISPEED" &
+             char_var != "JWTRNS" & char_var != "SCH" & char_var != "SCHL" &
+             char_var != "SEX") {
+    
+    stop("entered more than one variable or an invaild varaible") 
+    
+  } else {
+  my_url <- paste0("https://api.census.gov/data/",year,"/acs/acs1/pums?get=",char_var,",",paste(num_vars,collapse =","),"&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+}
+}
+```
+
+```{r}
+year <- 2022
+num_var <- "PWGTP,MAR"
+char_var <- "SEX"
+my_url <- paste0("https://api.census.gov/data/",year,"/acs/acs1/pums?get=",char_var,",",num_var,"&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+my_url
+
+```
+
+
+
