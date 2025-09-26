@@ -4,12 +4,28 @@ format: html
 editor: visual
 ---
 
+# Load Libraries
+
 ```{r}
 # Load in the tidyverse libraries
 library(tidyverse)
 ```
 
+# Introduction
+
+Introduction about what we are doing, discussion of what you are about to do and why/how, etc.
+
+## Data
+
+Maybe write anything about the API and data itself.
+
+# Data Processing
+
+## Helper Function
+
 Getting the usual process to work with a given URL
+
+Next, write a helper function to take what is returned by GET() and turn it into a nice tibble.
 
 ```{r}
 APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&for=state:09&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
@@ -29,6 +45,10 @@ api_tibble(httr::GET(APIurl))
 
 # This gives character type data for all columns, may need to change.
 ```
+
+## Single Year Function
+
+Write a function to query the API that allows the user to change the following items: (see project outline).
 
 if else logic test
 
@@ -120,7 +140,11 @@ census_data$GASP <- as.numeric(census_data$GASP)
 census_data
 ```
 
-## Summary
+## Multiple Year Function
+
+Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
+
+## Summary Function
 
 We can write our own custom summary function with the tibble that has a class of "census".
 
@@ -169,7 +193,7 @@ summary.census <- function(data,
 summary(census_data, c("AGEP","GASP"), c("SEX","FER"))
 ```
 
-## Plotting
+## Plot Function
 
 Code for creating a plot for a census class tibble with ggplot
 
