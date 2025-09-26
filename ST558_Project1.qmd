@@ -155,21 +155,18 @@ summary.census <- function(data,
     }
   }
   
+  # Counting the the categorical variables
+  for (var in cat_var_vec) {
+    summary_list[[paste0(var,"_count")]] <- data |> 
+      group_by(data[,var]) |>
+      summarise(count = sum(PWGTP))
+  }
+  
   # return the values as a named list
   return(summary_list)
 }
 
 summary(census_data, c("AGEP","GASP"), c("SEX","FER"))
-```
-
-```{r}
-vec <- c("1", "2", "3")
-my_list <- list()
-
-for (number in vec) {
-  my_list[number] <- number
-}
-my_list
 ```
 
 ## Plotting
@@ -190,5 +187,5 @@ plot.census <- function(data, cat_var, num_var) {
 ```
 
 ```{r}
-plot(census_data, "SEX", "AGEP")
+plot(census_data, "FER", "AGEP")
 ```
