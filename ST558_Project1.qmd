@@ -5,6 +5,7 @@ editor: visual
 ---
 
 ```{r}
+# Load in the tidyverse libraries
 library(tidyverse)
 ```
 
@@ -19,10 +20,14 @@ api_tibble <- function(GET_output) {
   
   colnames(census_parsed) <- census_parsed[1,]
   census_parsed <- census_parsed[-1,]
-  return(as_tibble(census_parsed))
+  census_tibble <- as_tibble(census_parsed)
+  class(census_tibble) <- c("census", class(census_tibble))
+  return(census_tibble)
 }
 
 api_tibble(httr::GET(APIurl))
+
+# This gives character type data for all columns, may need to change.
 ```
 
 if else logic test
@@ -69,22 +74,22 @@ call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var =
     stop("entered more than one variable or an invaild varaible") 
     
   } else {
-  my_url <- paste0("https://api.census.gov/data/",
-                   year,
-                   "/acs/acs1/pums?get=",
-                   char_var,
-                   ",",
-                   paste(num_vars,collapse =","),
-                   "&for=state:",
-                   state,
-                   "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
-}
+    my_url <- paste0("https://api.census.gov/data/",
+                     year,
+                     "/acs/acs1/pums?get=",
+                     char_var,
+                     ",",
+                     paste(num_vars,collapse =","),
+                     "&for=state:",
+                     state,
+                     "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+  }
 }
 ```
 
 ```{r}
 year <- 2022
-num_var <- "PWGTP,MAR"
+num_var <- "PWGTP,AGEP"
 char_var <- "SEX"
 state <- "09"
 my_url <- paste0("https://api.census.gov/data/",
@@ -101,5 +106,66 @@ my_url
 ```
 
 ```{r}
-api_tibble(httr::GET(my_url))
+# Somewhere we need to turn numerical variables into numeric or time values 
+# Somwhere we need to turn categorical variables into factors 
+# temporarily doing that here. 
+census_data <- api_tibble(httr::GET(my_url))
+
+census_data$SEX <- as.factor(census_data$SEX)
+census_data$PWGTP <- as.numeric(census_data$PWGTP)
+census_data$AGEP <- as.numeric(census_data$AGEP)
+
+census_data
+```
+
+We can write our own custom summary function with the tibble that has a class of "census".
+
+```{r}
+# Write function that produces means and std devs for numeric variables
+# and counts for categorical variables. 
+summary.census <- function(data, num_var, cat_var) {
+  summary_list <- list()
+  # By default, summarize all numeric variables (other than PWGTP)
+  # and all categorical variables in the tibble
+  # User should be able to specify the variables they'd like to summarize
+  for (var in num_var) {
+    if (var %in% names(data)) {
+      summary_list[var] <- sum(data[,var] * data$PWGTP) / sum(data$PWGTP)
+    }
+  }
+  # sqrt(sum((data$var)^2) * data$PWGTP) / sum(data$PWGTP) - (data$var_mean)^2)
+  
+  
+  # return the values as a named list
+  return(summary_list)
+}
+
+summary(census_data, c("AGEP","GASP"), c("SEX","FER"))
+```
+
+```{r}
+vec <- c("1", "2", "3")
+my_list <- list()
+
+for (number in vec) {
+  my_list[number] <- number
+}
+my_list
+```
+
+Code for creating a plot for a census class tibble with ggplot
+
+Requires the user to specify one categorical variable and one numeric variable for plotting purposes.
+
+```{r}
+plot.census <- function(data, cat_var, num_var) {
+  ggplot(data, 
+         aes(x = get(cat_var), y = get(num_var), weight = as.numeric(PWGTP))) +
+  geom_boxplot() +
+    labs(x = cat_var, y = num_var)
+}
+```
+
+```{r}
+plot(census_data, "SEX", "AGEP")
 ```
