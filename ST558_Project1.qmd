@@ -74,8 +74,14 @@ if (!is.numeric(year) | year < 2010 | year > 2022) {
 
 ```
 
+Dictionary
 ```{r}
-call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var = "SEX", geo_level = "state", geo_subset = "09") {
+
+```
+
+
+```{r}
+call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX", geo_level = "state", geo_subset = "09") {
   if (!is.numeric(year) | year < 2010 | year > 2022) {
   
     stop("year input invalid!") 
@@ -108,14 +114,14 @@ call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var =
 
  API_data <- api_tibble(my_url)
  
-  #change to data
+  #change to new data type
 if ("SEX" %in% names(API_data)) {
-  API_tibble <- API_tibble |>
+  API_data <- API_data |>
     mutate(SEX = ifelse(SEX == "1", "Male", 
                          "Female")) |>
     mutate(SEX = factor(SEX))
-} else if ("FER" %in% names(API_tibble)) {
-  API_tibble <- API_tibble |>
+} else if ("FER" %in% names(API_data)) {
+  API_data <- API_tibble |>
     mutate(FER = ifelse(FER == "0", 
                         "N/A (less than 15 years/greater than 50 years/
                         male)", 
@@ -124,8 +130,8 @@ if ("SEX" %in% names(API_data)) {
 }
 }
 
-API_tibble <- API_tibble |> 
-   mutate(across(any_of(c("PWGTP", "AGEP", "GASP")), as.numeric))
+API_data <- API_data |> 
+   mutate(across(any_of(c("PWGTP", "AGEP", "GASP","GRPIP")), as.numeric))
 ```
 
 ```{r}
