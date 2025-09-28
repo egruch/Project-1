@@ -126,6 +126,9 @@ if ("SEX" %in% names(API_tibble)) {
     mutate(FER = factor(FER))
 }
 }
+
+API_tibble <- API_tibble |> 
+   mutate(across(any_of(c("PWGTP", "AGEP", "GASP")), as.numeric))
 ```
 
 ```{r}
@@ -158,7 +161,8 @@ if ("SEX" %in% names(census_data)) {
                         ifelse(SEX == "2", "Female", "NA"))) |>
     mutate(SEX = factor(SEX))
 }
-
+ census_data |> 
+   mutate(across(any_of(c("PWGTP", "AGEP", "GASP")), as.numeric))
 
 census_data$SEX <- as.factor(census_data$SEX)
 census_data$FER <- as.factor(census_data$FER)
