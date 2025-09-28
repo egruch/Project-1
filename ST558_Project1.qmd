@@ -9,6 +9,7 @@ editor: visual
 ```{r}
 # Load in the tidyverse libraries
 library(tidyverse)
+library(lubridate)
 ```
 
 # Introduction
@@ -105,14 +106,10 @@ call_API <- function(my_url, year=2022, num_vars = c("PWGTP", "MAR"), char_var =
                      "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
   }
 
-  API_parsed <- jsonlite::fromJSON(rawToChar(my_url$content))
-  
-  colnames(API_parsed) <- API_parsed[1,]
-  API_parsed <- API_parsed[-1,]
-  API_tibble <- as_tibble(API_parsed)
-  #class(API_tibble) <- c("census", class(API_tibble))
-  
-if ("SEX" %in% names(API_tibble)) {
+ API_data <- api_tibble(my_url)
+ 
+  #change to data
+if ("SEX" %in% names(API_data)) {
   API_tibble <- API_tibble |>
     mutate(SEX = ifelse(SEX == "1", "Male", 
                          "Female")) |>
@@ -133,7 +130,7 @@ API_tibble <- API_tibble |>
 
 ```{r}
 year <- 2022
-num_var <- "PWGTP,AGEP,GASP"
+num_var <- "PWGTP,AGEP,JWAP"
 char_var <- "SEX,FER"
 state <- "09"
 my_url <- paste0("https://api.census.gov/data/",
