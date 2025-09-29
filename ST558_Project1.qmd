@@ -10,6 +10,7 @@ editor: visual
 # Load in the tidyverse libraries
 library(tidyverse)
 library(lubridate)
+library(hms)
 ```
 
 # Introduction
@@ -735,7 +736,22 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
       time_var <- intersect(num_vars, c("JWAP", "JWDP"))
       for (var in time_var) {
      API_data <- API_data |>
-      mutate(!!var := get(paste0(var, "_dict"))[get(var)])
+      mutate(!!var := get(paste0(var, "_dict"))[get(var)]) |>
+      mutate(
+         time_1 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get(var))), 
+                      " TO ", 1), 
+                  format = "%I:%M %p")),
+         time_2 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get(var))), 
+                      " TO ", 2),
+                  format = "%I:%M %p")),
+         !!var :=  as_hms(time_1 + (time_2 - time_1)/2)
+      ) |>
+      select(-starts_with("time"))
+       
       }
   }
   
@@ -756,6 +772,21 @@ test_tib <- call_API(2022,
                      "state", 
                      "09")
 test_tib
+
+test_tib |>
+  mutate(
+         time_1 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get("JWAP"))), 
+                      " TO ", 1), 
+                  format = "%I:%M %p")),
+         time_2 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get("JWAP"))), 
+                      " TO ", 2),
+                  format = "%I:%M %p")),
+         get(var) = as_hms(time_1 + (time_2 - time_1)/2)
+  )
 ```
 
 ```{r}
@@ -773,6 +804,9 @@ my_url <- paste0("https://api.census.gov/data/",
                  state,
                  "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
 my_url
+
+api_tibble(httr::GET(my_url)) |>
+  filter(PWGTP == 78 & AGEP == 26)
 
 ```
 
