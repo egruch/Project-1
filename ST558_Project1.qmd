@@ -56,21 +56,39 @@ if else logic test
 ```{r}
 year = 2022
 num_var <- "PWGTP,MAR"
-num_var2 <- c("PWGTP", "MAR")
+num_var2 <- c("PWGTP", "AGEP")
 char_var = "SEX"
+geo_level = "all"
+geo_subset <- "09"
 if (!is.numeric(year) | year < 2010 | year > 2022) {
   "BAD1" 
 } else if (!is.element("PWGTP", num_var2)) {
     "BAD2"
 } else if (length(num_var2) < 2) {
   "BAD3"
-  } else if (char_var != "FER" & char_var != "HHL" & char_var != "HISPEED" &
-             char_var != "JWTRNS" & char_var != "SCH" & char_var != "SCHL" &
-             char_var != "SEX") {
-    "BAD3"
+} else if ( !all(num_var2 %in% c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", 
+                             "JWDP", "JWMNP"))) {
+  "BAD4"
+} else if (!all(char_var %in% c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", 
+                             "SCHL", "SEX"))) {
+  "BAD5"
+  
+  #char_var != "FER" & char_var != "HHL" & char_var != "HISPEED" &
+             #char_var != "JWTRNS" & char_var != "SCH" & char_var != "SCHL" &
+             #char_var != "SEX") {
+    #"BAD3"
+} else if (geo_level != "state" & geo_level != "division" & 
+           geo_level != "region" & char_var != "all"){
+  "BAD6"  
   } else {
   "yay"
 }
+
+geo_paste <- ifelse(geo_level == "all", "",
+                        paste0("&for=",geo_level,":",
+                        geo_subset))
+
+
 
 ```
 
@@ -95,13 +113,21 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX",
     
     stop("must enter more than one numeric variable")
     
-  } else if (char_var != "FER" & char_var != "HHL" & char_var != "HISPEED" &
-             char_var != "JWTRNS" & char_var != "SCH" & char_var != "SCHL" &
-             char_var != "SEX") {
+  } else if ( !all(num_vars %in% c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", 
+                             "JWDP", "JWMNP"))) {
+    stop("entered an invalid numeric variable")
     
-    stop("entered more than one variable or an invaild varaible") 
+  } else if (!all(char_var %in% c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", 
+                             "SCHL", "SEX"))) {
+    
+    stop("entered  an invaild character varaible") 
     
   } else {
+    
+    geo_paste <- ifelse(geo_level == "all", "",
+                        paste0("&for=",geo_level,":",
+                        geo_subset))
+    
     my_url <- paste0("https://api.census.gov/data/",
                      year,
                      "/acs/acs1/pums?get=",
@@ -110,6 +136,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX",
                      paste(num_vars,collapse =","),
                      "&for=",geo_level,":",
                      geo_subset,
+                     geo_paste,
                      "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
   }
 
