@@ -95,12 +95,142 @@ geo_paste <- ifelse(geo_level == "all", "",
 Dictionary
 
 ```{r}
+FER_dict <- c("0" = "N/A (less than 15 years/greater than 50 years/ male)",
+              "1" = "Yes",
+              "2" = "No")
+
+HHL_dict <- c("0" = "N/A (GQ/vacant)",
+              "1" = "English Only",
+              "2" = "Spanish",
+              "3" = "Other Indo-European languages",
+              "4" = "Asian and Pacific Island languages",
+              "5" = "Other Language")
+
+HISPEED_dict <- c("0" = "N/A (GQ/vacant/no paid access to the internet)",
+                  "1" = "Yes",
+                  "2" = "No")
+
+JWTRNS_dict <- c("0" = "N/A (not a worker-not in the labor force, including persons under 16 years; unemployed; employed, with a job but not at work; Armed Forces, with a job but not at work)",
+                 "10" = "Walked",
+                 "11" = "Worked from home",
+                 "12" = "Other method",
+                 "07" = "Taxicab",
+                 "02" = "Bus",
+                 "05" = "Light rail, streetcar, or trolley",
+                 "04" = "Long-distance train or commuter rail",
+                 "09" = "Bicycle",
+                 "01" = "Car, truck, or van",
+                 "03" = "Subway or elevated rail",
+                 "06" = "Ferryboat",
+                 "08" = "Motorcycle")
+
+SCH_dict <- c("0" = "N/A (less than 3 years old)",
+              "1" = "No, has not attended in the last 3 months",
+              "2" = "Yes, public school or public college",
+              "3" = "Yes, private school or college or home school")
+
+SCHL_dict <- c("16" = "Regular high school diploma",
+               "01" = "No schooling completed",
+               "04" = "Grade 1",
+               "03" = "Kindergarten",
+               "07" = "Grade 4",
+               "23" = "Professional degree beyond a bachelor's degree",
+               "19" = "1 or more years of college credit, no degree",
+               "22" = "Master's degree",
+               "10" = "Grade 7",
+               "20" = "Associate's degree",
+               "0" = "N/A (less than 3 years old)",
+               "02" = "Nursery school, preschool",
+               "21" = "Bachelor's degree",
+               "08" = "Grade 5",
+               "24" = "Doctorate degree",
+               "06" = "Grade 3",
+               "14" = "Grade 11",
+               "17" = "GED or alternative credential",
+               "12" = "Grade 9",
+               "15" = "12th grade - no diploma",
+               "13" = "Grade 10",
+               "05" = "Grade 2",
+               "11" = "Grade 8",
+               "18" = "Some college, but less than 1 year",
+               "09" = "Grade 6")
+
 SEX_dict <- c("1" = "male",
               "2" = "female")
+
+region_dict <- c("1" = "Northeast",
+      "9" = "Puerto Rico",
+      "3" = "South",
+      "2" = "Midwest",
+      "4" = "West")
+
+division_dict <- c("7" = "West South Central (South Region)",
+      "2" = "Middle Atlantic (Northeast region)",
+      "4" = "West North Central (Midwest region)",
+      "6" = "East South Central (South region)",
+      "3" = "East North Central (Midwest region)",
+      "9" = "Pacific (West region)",
+      "0" = "Puerto Rico",
+      "5" = "South Atlantic (South region)",
+      "8" = "Mountain (West region)",
+      "1" = "New England (Northeast region)")
+
+state_dict <- c("01" = "Alabama/AL",
+      "49" = "Utah/UT",
+      "21" = "Kentucky/KY",
+      "26" = "Michigan/MI",
+      "29" = "Missouri/MO",
+      "32" = "Nevada/NV",
+      "34" = "New Jersey/NJ",
+      "08" = "Colorado/CO",
+      "51" = "Virginia/VA",
+      "39" = "Ohio/OH",
+      "02" = "Alaska/AK",
+      "46" = "South Dakota/SD",
+      "04" = "Arizona/AZ",
+      "06" = "California/CA",
+      "55" = "Wisconsin/WI",
+      "15" = "Hawaii/HI",
+      "22" = "Louisiana/LA",
+      "30" = "Montana/MT",
+      "47" = "Tennessee/TN",
+      "48" = "Texas/TX",
+      "09" = "Connecticut/CT",
+      "50" = "Vermont/VT",
+      "53" = "Washington/WA",
+      "17" = "Illinois/IL",
+      "20" = "Kansas/KS",
+      "72" = "Puerto Rico/PR",
+      "35" = "New Mexico/NM",
+      "36" = "New York/NY",
+      "10" = "Delaware/DE",
+      "11" = "District of Columbia/DC",
+      "12" = "Florida/FL",
+      "56" = "Wyoming/WY",
+      "16" = "Idaho/ID",
+      "25" = "Massachusetts/MA",
+      "27" = "Minnesota/MN",
+      "42" = "Pennsylvania/PA",
+      "45" = "South Carolina/SC",
+      "13" = "Georgia/GA",
+      "23" = "Maine/ME",
+      "24" = "Maryland/MD",
+      "28" = "Mississippi/MS",
+      "37" = "North Carolina/NC",
+      "41" = "Oregon/OR",
+      "05" = "Arkansas/AR",
+      "19" = "Iowa/IA",
+      "31" = "Nebraska/NE",
+      "33" = "New Hampshire/NH",
+      "44" = "Rhode Island/RI",
+      "54" = "West Virginia/WV",
+      "18" = "Indiana/IN",
+      "38" = "North Dakota/ND",
+      "40" = "Oklahoma/OK")
 ```
 
 ```{r}
-call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX", geo_level = "state", geo_subset = "09") {
+call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
   if (!is.numeric(year) | year < 2010 | year > 2022) {
   
     stop("year input invalid!") 
@@ -131,53 +261,41 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX",
     my_url <- paste0("https://api.census.gov/data/",
                      year,
                      "/acs/acs1/pums?get=",
-                     char_var,
+                     paste(char_var,collapse =","),
                      ",",
                      paste(num_vars,collapse =","),
-                     "&for=",geo_level,":",
-                     geo_subset,
                      geo_paste,
                      "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+    
   }
 
- API_data <- api_tibble(httr::GET(my_url))
+  # Use the helper function to query the API with the URL, then make a tibble
+  API_data <- api_tibble(httr::GET(my_url))
  
-  #change to new data type
-if ("SEX" %in% names(API_data)) {
+  # Using dictionaries to convert the values in the character variables
+  # Then converting those character type columns to factors
+  for (var in c(char_var, geo_level)) {
+    API_data <- API_data |> 
+      # the !! := part allows you to use a "string" for a new variable name
+      # get() takes a string and gets the corresponding dictionary or column
+      mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
+  }
+  
+  # Converts the remaining columns to numeric
   API_data <- API_data |>
-    mutate(SEX = ifelse(SEX == "1", "Male", 
-                         "Female")) |>
-    mutate(SEX = factor(SEX))
-} else if ("FER" %in% names(API_data)) {
-  API_data <- API_tibble |>
-    mutate(FER = ifelse(FER == "0", 
-                        "N/A (less than 15 years/greater than 50 years/
-                        male)", 
-                        ifelse(FER == "2", "No", "Yes"))) |>
-    mutate(FER = factor(FER))
+    # Across all columns that are character type, convert them to numeric
+    mutate(across(where(is.character), as.numeric))
+  
+  return(API_data)
 }
- 
- for (var in char_var)
-  test_tibble <- API_data |> 
-   # The only way I could find to convert a "string" to a variable name 
-   mutate("SEX_new" = get(paste0(var, "_dict"))[get(var)]) |>
-    select(ends_with("new")) |>
-    rename("SEX" = "SEX_new")
- 
-  return(test_tibble)
-}
-
-#API_data <- API_data |> 
-#   mutate(across(any_of(c("PWGTP", "AGEP", "GASP","GRPIP")), as.numeric))
 ```
 
 ```{r}
-var = "SEX"
-
-```
-
-```{r}
-test_tib <- call_API(2022, c("PWGTP", "AGEP"), "SEX", "state", "09")
+test_tib <- call_API(2022, 
+                     c("PWGTP", "AGEP", "GASP", "GRPIP", "JWMNP"), 
+                     c("SEX","FER","HHL", "HISPEED", "JWTRNS", "SCH", "SCHL"), 
+                     "state", 
+                     "09")
 test_tib
 ```
 
