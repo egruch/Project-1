@@ -75,10 +75,11 @@ if (!is.numeric(year) | year < 2010 | year > 2022) {
 ```
 
 Dictionary
+
 ```{r}
-
+SEX_dict <- c("1" = "male",
+              "2" = "female")
 ```
-
 
 ```{r}
 call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX", geo_level = "state", geo_subset = "09") {
@@ -107,12 +108,12 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = "SEX",
                      char_var,
                      ",",
                      paste(num_vars,collapse =","),
-                     "&for=",geolevel,":",
+                     "&for=",geo_level,":",
                      geo_subset,
                      "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
   }
 
- API_data <- api_tibble(my_url)
+ API_data <- api_tibble(httr::GET(my_url))
  
   #change to new data type
 if ("SEX" %in% names(API_data)) {
@@ -128,10 +129,29 @@ if ("SEX" %in% names(API_data)) {
                         ifelse(FER == "2", "No", "Yes"))) |>
     mutate(FER = factor(FER))
 }
+ 
+ for (var in char_var)
+  test_tibble <- API_data |> 
+   # The only way I could find to convert a "string" to a variable name 
+   mutate("SEX_new" = get(paste0(var, "_dict"))[get(var)]) |>
+    select(ends_with("new")) |>
+    rename("SEX" = "SEX_new")
+ 
+  return(test_tibble)
 }
 
-API_data <- API_data |> 
-   mutate(across(any_of(c("PWGTP", "AGEP", "GASP","GRPIP")), as.numeric))
+#API_data <- API_data |> 
+#   mutate(across(any_of(c("PWGTP", "AGEP", "GASP","GRPIP")), as.numeric))
+```
+
+```{r}
+var = "SEX"
+
+```
+
+```{r}
+test_tib <- call_API(2022, c("PWGTP", "AGEP"), "SEX", "state", "09")
+test_tib
 ```
 
 ```{r}
