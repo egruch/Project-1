@@ -60,7 +60,7 @@ num_var <- "PWGTP,MAR"
 num_var2 <- c("PWGTP", "AGEP")
 char_var = "SEX"
 geo_level = "all"
-geo_subset <- "09"
+geo_subset <- "2"
 if (!is.numeric(year) | year < 2010 | year > 2022) {
   "BAD1" 
 } else if (!is.element("PWGTP", num_var2)) {
@@ -83,6 +83,13 @@ if (!is.numeric(year) | year < 2010 | year > 2022) {
 #(geo_level != "state" & geo_level != "division" & 
            #geo_level != "region" & char_var != "all"){
   "BAD6"  
+  
+} else if (!(geo_subset %in%
+             c(names(state_dict),names(division_dict), 
+               names(region_dict))
+             )) {
+  "BAD7"
+  
 } else {
   "yay"
 }
@@ -703,7 +710,14 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
     
     stop("entered an invalid geography level")
     
-  }  else {
+  }  else if (!(geo_subset %in%
+             c(names(state_dict),names(division_dict), 
+               names(region_dict))
+             )) {
+  
+    stop("entered an invalid geography subset")
+  
+  } else {
     
     geo_paste <- ifelse(geo_level == "all", "",
                         paste0("&for=",geo_level,":",
@@ -757,9 +771,9 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
   
   
   # Converts the remaining columns to numeric
-  #API_data <- API_data |>
+  API_data <- API_data |>
     # Across all columns that are character type, convert them to numeric
-    #mutate(across(where(is.character), as.numeric))
+    mutate(across(where(is.character), as.numeric))
   
   return(API_data)
 }
@@ -837,6 +851,34 @@ census_data
 ## Multiple Year Function
 
 Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
+
+```{r}
+multi_year_API <- function(years, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
+  
+  API_list <- list()
+  
+  for (i in 1:length(years) ) {
+    
+    list_tibble_name <- paste0("API_", years[i])
+    API_list[[list_tibble_name]] <- call_API(years[i], 
+                                         num_vars, char_var,
+                                         geo_level, geo_subset)
+    
+    #get(paste0("API_", years[i])) <- call_API(years[i], 
+                                        # num_vars, char_var,
+                                        # geo_level, geo_subset)
+  #API_list <- append(API_list, get(paste0("API_", years[i])))  
+  }
+  
+  API_comb <- do.call(rbind, API_list)
+  return(API_comb)
+}
+```
+
+```{r}
+multi_year_API(years = c(2019,2022))
+```
+
 
 ## Summary Function
 
