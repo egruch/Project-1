@@ -10,6 +10,7 @@ editor: visual
 # Load in the tidyverse libraries
 library(tidyverse)
 library(lubridate)
+library(hms)
 ```
 
 # Introduction
@@ -59,7 +60,7 @@ num_var <- "PWGTP,MAR"
 num_var2 <- c("PWGTP", "AGEP")
 char_var = "SEX"
 geo_level = "all"
-geo_subset <- "09"
+geo_subset <- "2"
 if (!is.numeric(year) | year < 2010 | year > 2022) {
   "BAD1" 
 } else if (!is.element("PWGTP", num_var2)) {
@@ -82,6 +83,13 @@ if (!is.numeric(year) | year < 2010 | year > 2022) {
 #(geo_level != "state" & geo_level != "division" & 
            #geo_level != "region" & char_var != "all"){
   "BAD6"  
+  
+} else if (!(geo_subset %in%
+             c(names(state_dict),names(division_dict), 
+               names(region_dict))
+             )) {
+  "BAD7"
+  
 } else {
   "yay"
 }
@@ -704,7 +712,14 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
     
     stop("entered an invalid geography level")
     
-  }  else {
+  }  else if (!(geo_subset %in%
+             c(names(state_dict),names(division_dict), 
+               names(region_dict))
+             )) {
+  
+    stop("entered an invalid geography subset")
+  
+  } else {
     
     geo_paste <- ifelse(geo_level == "all", "",
                         paste0("&for=",geo_level,":",
@@ -742,7 +757,23 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
       time_var <- intersect(num_vars, c("JWAP", "JWDP"))
       for (var in time_var) {
      API_data <- API_data |>
-      mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
+
+      mutate(!!var := get(paste0(var, "_dict"))[get(var)]) |>
+      mutate(
+         time_1 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get(var))), 
+                      " TO ", 1), 
+                  format = "%I:%M %p")),
+         time_2 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get(var))), 
+                      " TO ", 2),
+                  format = "%I:%M %p")),
+         !!var :=  as_hms(time_1 + (time_2 - time_1)/2)
+      ) |>
+      select(-starts_with("time"))
+       
       }
   }
   
@@ -782,8 +813,71 @@ test_tib <- call_API(2018,
                      "state", 
                      "09")
 test_tib
+
+test_tib |>
+  mutate(
+         time_1 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get("JWAP"))), 
+                      " TO ", 1), 
+                  format = "%I:%M %p")),
+         time_2 = as_hms(strptime(
+                      stringr::str_split_i(
+                        toupper(gsub('[.]','', get("JWAP"))), 
+                      " TO ", 2),
+                  format = "%I:%M %p")),
+         get(var) = as_hms(time_1 + (time_2 - time_1)/2)
+  )
 ```
 
+<<<<<<< HEAD
+=======
+```{r}
+year <- 2022
+num_var <- "PWGTP,AGEP,JWAP"
+char_var <- "SEX,FER"
+state <- "09"
+my_url <- paste0("https://api.census.gov/data/",
+                 year,
+                 "/acs/acs1/pums?get=",
+                 char_var,
+                 ",",
+                 num_var,
+                 "&for=state:",
+                 state,
+                 "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+my_url
+
+api_tibble(httr::GET(my_url)) |>
+  filter(PWGTP == 78 & AGEP == 26)
+
+```
+
+```{r}
+# Somewhere we need to turn numerical variables into numeric or time values 
+# Somwhere we need to turn categorical variables into factors 
+# temporarily doing that here. 
+census_data <- api_tibble(httr::GET(my_url))
+
+if ("SEX" %in% names(census_data)) {
+  census_data <- census_data |>
+    mutate(SEX = ifelse(SEX == "1", "Male", 
+                        ifelse(SEX == "2", "Female", "NA"))) |>
+    mutate(SEX = factor(SEX))
+}
+ census_data |> 
+   mutate(across(any_of(c("PWGTP", "AGEP", "GASP")), as.numeric))
+
+census_data$SEX <- as.factor(census_data$SEX)
+census_data$FER <- as.factor(census_data$FER)
+census_data$PWGTP <- as.numeric(census_data$PWGTP)
+census_data$AGEP <- as.numeric(census_data$AGEP)
+census_data$GASP <- as.numeric(census_data$GASP)
+
+census_data
+```
+
+>>>>>>> 55919a3a92d1978f2c56fb144c1a6acda82e81aa
 ## Multiple Year Function
 
 Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
@@ -806,6 +900,26 @@ call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), ch
     }
   }
   return(multi_year_tibble)
+  
+#multi_year_API <- function(years, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
+  
+#  API_list <- list()
+  
+# for (i in 1:length(years) ) {
+    
+#    list_tibble_name <- paste0("API_", years[i])
+#    API_list[[list_tibble_name]] <- call_API(years[i], 
+#                                         num_vars, char_var,
+#                                         geo_level, geo_subset)
+    
+    #get(paste0("API_", years[i])) <- call_API(years[i], 
+                                        # num_vars, char_var,
+                                        # geo_level, geo_subset)
+  #API_list <- append(API_list, get(paste0("API_", years[i])))  
+#  }
+  
+#  API_comb <- do.call(rbind, API_list)
+#  return(API_comb)
 }
 ```
 
@@ -821,6 +935,12 @@ test_tibble <- call_API_mult_years(c(2019,2021, 2022),
 test_tibble
 ```
 
+=======
+multi_year_API(years = c(2019,2022))
+```
+
+
+>>>>>>> 55919a3a92d1978f2c56fb144c1a6acda82e81aa
 ## Summary Function
 
 We can write our own custom summary function with the tibble that has a class of "census".
