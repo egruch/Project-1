@@ -187,19 +187,24 @@ division_dict <- c("7" = "West South Central (South Region)",
       "8" = "Mountain (West region)",
       "1" = "New England (Northeast region)")
 
-state_dict <- c("01" = "Alabama/AL",
+state_dict <- c("1" = "Alabama/AL",
+      "01" = "Alabama/AL",
       "49" = "Utah/UT",
       "21" = "Kentucky/KY",
       "26" = "Michigan/MI",
       "29" = "Missouri/MO",
       "32" = "Nevada/NV",
       "34" = "New Jersey/NJ",
+      "8" = "Colorado/CO",
       "08" = "Colorado/CO",
       "51" = "Virginia/VA",
       "39" = "Ohio/OH",
+      "2" = "Alaska/AK",
       "02" = "Alaska/AK",
       "46" = "South Dakota/SD",
+      "4" = "Arizona/AZ",
       "04" = "Arizona/AZ",
+      "6" = "California/CA",
       "06" = "California/CA",
       "55" = "Wisconsin/WI",
       "15" = "Hawaii/HI",
@@ -207,6 +212,7 @@ state_dict <- c("01" = "Alabama/AL",
       "30" = "Montana/MT",
       "47" = "Tennessee/TN",
       "48" = "Texas/TX",
+      "9" = "Connecticut/CT",
       "09" = "Connecticut/CT",
       "50" = "Vermont/VT",
       "53" = "Washington/WA",
@@ -230,6 +236,7 @@ state_dict <- c("01" = "Alabama/AL",
       "28" = "Mississippi/MS",
       "37" = "North Carolina/NC",
       "41" = "Oregon/OR",
+      "5" = "Arkansas/AR",
       "05" = "Arkansas/AR",
       "19" = "Iowa/IA",
       "31" = "Nebraska/NE",
@@ -748,14 +755,14 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
       mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
   }
   
-  #for (var in num_vars[(num_vars == "JWAP") |
-  #                     (num_vars == "JWDP")]) {
+  for (var in num_vars[(num_vars == "JWAP") |
+                       (num_vars == "JWDP")]) {
   #  API_data <- API_data |>
   #    mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
   #}
-  if ("JWAP" %in% num_vars | "JWDP" %in% num_vars) {
-      time_var <- intersect(num_vars, c("JWAP", "JWDP"))
-      for (var in time_var) {
+  #if ("JWAP" %in% num_vars | "JWDP" %in% num_vars) {
+  #    time_var <- intersect(num_vars, c("JWAP", "JWDP"))
+  #    for (var in time_var) {
      API_data <- API_data |>
 
       mutate(!!var := get(paste0(var, "_dict"))[get(var)]) |>
@@ -774,7 +781,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
       ) |>
       select(-starts_with("time"))
        
-      }
+      #}
   }
   
   # Go through the rest of the numerical variables and replace values
@@ -807,29 +814,32 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
 ```
 
 ```{r}
-test_tib <- call_API(2018, 
-                     c("PWGTP", "AGEP", "JWAP","JWDP", "GASP", "GRPIP", "JWMNP"), 
-                     c("SEX","FER"), 
+test_tib <- call_API(2022, 
+                     c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP","JWDP", "JWMNP"),
+                     c("FER", "HHL", "SCH", "SCHL", "SEX"),
                      "state", 
                      "09")
 test_tib
 
-test_tib |>
-  mutate(
-         time_1 = as_hms(strptime(
-                      stringr::str_split_i(
-                        toupper(gsub('[.]','', get("JWAP"))), 
-                      " TO ", 1), 
-                  format = "%I:%M %p")),
-         time_2 = as_hms(strptime(
-                      stringr::str_split_i(
-                        toupper(gsub('[.]','', get("JWAP"))), 
-                      " TO ", 2),
-                  format = "%I:%M %p")),
-         get(var) = as_hms(time_1 + (time_2 - time_1)/2)
-  )
-```
+# These variables only work on 2019 and 2021 and cause error otherwise
+# HISPEED, JWTRNS
+# Seems to be no data on 2020
 
+#test_tib |>
+#  mutate(
+#         time_1 = as_hms(strptime(
+#                      stringr::str_split_i(
+#                        toupper(gsub('[.]','', get("JWAP"))), 
+#                      " TO ", 1), 
+#                  format = "%I:%M %p")),
+#         time_2 = as_hms(strptime(
+#                      stringr::str_split_i(
+#                        toupper(gsub('[.]','', get("JWAP"))), 
+#                      " TO ", 2),
+#                  format = "%I:%M %p")),
+#         get(var) = as_hms(time_1 + (time_2 - time_1)/2)
+#  )
+```
 
 ```{r}
 year <- 2022
@@ -875,6 +885,7 @@ census_data$GASP <- as.numeric(census_data$GASP)
 
 census_data
 ```
+
 ## Multiple Year Function
 
 Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
