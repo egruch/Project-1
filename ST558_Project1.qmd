@@ -830,8 +830,7 @@ test_tib |>
   )
 ```
 
-<<<<<<< HEAD
-=======
+
 ```{r}
 year <- 2022
 num_var <- "PWGTP,AGEP,JWAP"
@@ -876,8 +875,6 @@ census_data$GASP <- as.numeric(census_data$GASP)
 
 census_data
 ```
-
->>>>>>> 55919a3a92d1978f2c56fb144c1a6acda82e81aa
 ## Multiple Year Function
 
 Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
@@ -935,12 +932,6 @@ test_tibble <- call_API_mult_years(c(2019,2021, 2022),
 test_tibble
 ```
 
-=======
-multi_year_API(years = c(2019,2022))
-```
-
-
->>>>>>> 55919a3a92d1978f2c56fb144c1a6acda82e81aa
 ## Summary Function
 
 We can write our own custom summary function with the tibble that has a class of "census".
