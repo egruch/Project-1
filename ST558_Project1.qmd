@@ -97,6 +97,7 @@ if (!is.numeric(year) | year < 2010 | year > 2022) {
 Dictionary
 
 ```{r}
+# Categorical Variables
 FER_dict <- c("0" = "N/A (less than 15 years/greater than 50 years/ male)",
               "1" = "Yes",
               "2" = "No")
@@ -160,6 +161,7 @@ SCHL_dict <- c("16" = "Regular high school diploma",
 SEX_dict <- c("1" = "male",
               "2" = "female")
 
+# Geo Level Variables
 region_dict <- c("1" = "Northeast",
       "9" = "Puerto Rico",
       "3" = "South",
@@ -230,7 +232,7 @@ state_dict <- c("01" = "Alabama/AL",
       "38" = "North Dakota/ND",
       "40" = "Oklahoma/OK")
 
-
+# Time Variables
 JWAP_dict <- c(
       "258" = "9:40 p.m. to 9:44 p.m.",
       "260" = "9:50 p.m. to 9:54 p.m.",
@@ -731,78 +733,93 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
       mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
   }
   
+  #for (var in num_vars[(num_vars == "JWAP") |
+  #                     (num_vars == "JWDP")]) {
+  #  API_data <- API_data |>
+  #    mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
+  #}
   if ("JWAP" %in% num_vars | "JWDP" %in% num_vars) {
       time_var <- intersect(num_vars, c("JWAP", "JWDP"))
       for (var in time_var) {
      API_data <- API_data |>
-      mutate(!!var := get(paste0(var, "_dict"))[get(var)])
+      mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
       }
   }
   
+  # Go through the rest of the numerical variables and replace values
+    for (var in num_vars[(num_vars != "PWGTP") &
+                       (num_vars != "JWAP") &
+                       (num_vars != "JWDP")]) {
+    if (var == "AGEP") {
+      API_data <- API_data |>
+        mutate(!!var := ifelse(get(var) == "0", NA, get(var)))
+    } else if (var == "GASP") {
+      API_data <- API_data |>
+        mutate(!!var := ifelse(get(var) == "3", NA, get(var)))
+    } else if (var == "GRPIP") {
+      API_data <- API_data |>
+        mutate(!!var := ifelse(get(var) == "0", NA,
+                               ifelse(get(var) == "101", NA, get(var))))
+    } else if (var == "JWMNP") {
+      API_data <- API_data |>
+        mutate(!!var := ifelse(get(var) == "0", NA, get(var)))
+    }
+  }
   
   # Converts the remaining columns to numeric
-  #API_data <- API_data |>
+  API_data <- API_data |>
     # Across all columns that are character type, convert them to numeric
-    #mutate(across(where(is.character), as.numeric))
+    mutate(across(where(is.character), as.numeric))
   
   return(API_data)
 }
 ```
 
 ```{r}
-test_tib <- call_API(2022, 
-                     c("PWGTP", "AGEP", "JWAP","JWDP"), 
+test_tib <- call_API(2018, 
+                     c("PWGTP", "AGEP", "JWAP","JWDP", "GASP", "GRPIP", "JWMNP"), 
                      c("SEX","FER"), 
                      "state", 
                      "09")
 test_tib
 ```
 
-```{r}
-year <- 2022
-num_var <- "PWGTP,AGEP,JWAP"
-char_var <- "SEX,FER"
-state <- "09"
-my_url <- paste0("https://api.census.gov/data/",
-                 year,
-                 "/acs/acs1/pums?get=",
-                 char_var,
-                 ",",
-                 num_var,
-                 "&for=state:",
-                 state,
-                 "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
-my_url
-
-```
-
-```{r}
-# Somewhere we need to turn numerical variables into numeric or time values 
-# Somwhere we need to turn categorical variables into factors 
-# temporarily doing that here. 
-census_data <- api_tibble(httr::GET(my_url))
-
-if ("SEX" %in% names(census_data)) {
-  census_data <- census_data |>
-    mutate(SEX = ifelse(SEX == "1", "Male", 
-                        ifelse(SEX == "2", "Female", "NA"))) |>
-    mutate(SEX = factor(SEX))
-}
- census_data |> 
-   mutate(across(any_of(c("PWGTP", "AGEP", "GASP")), as.numeric))
-
-census_data$SEX <- as.factor(census_data$SEX)
-census_data$FER <- as.factor(census_data$FER)
-census_data$PWGTP <- as.numeric(census_data$PWGTP)
-census_data$AGEP <- as.numeric(census_data$AGEP)
-census_data$GASP <- as.numeric(census_data$GASP)
-
-census_data
-```
-
 ## Multiple Year Function
 
 Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
+
+```{r}
+call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
+  first <- TRUE
+  for (year in years) {
+    if (first) {
+      multi_year_tibble <- call_API(year, num_vars, char_var, 
+                                    geo_level, geo_subset)
+      multi_year_tibble['Year'] <- year
+      first <- FALSE
+    } else {
+      single_year_tibble <- call_API(year, num_vars, char_var, 
+                                     geo_level, geo_subset)
+      single_year_tibble['Year'] <- year
+      multi_year_tibble <- dplyr::bind_rows(multi_year_tibble,
+                                            single_year_tibble)
+    }
+  }
+  return(multi_year_tibble)
+}
+```
+
+```{r}
+test_tibble <- call_API_mult_years(c(2019,2021, 2022),
+                                   c("PWGTP", "AGEP","GASP", "JWAP","JWDP",
+                                     "GRPIP", "JWMNP"),
+                                   c("SEX","FER", "HHL", "HISPEED", "JWTRNS",
+                                     "SCH", "SCHL"),
+                                   "state",
+                                   "09")
+
+test_tibble
+```
 
 ## Summary Function
 
@@ -819,38 +836,47 @@ summary.census <- function(data,
   # and all categorical variables in the tibble
   # User should be able to specify the variables they'd like to summarize
   if (num_var_vec[1] == "all") {
-    # num_var_vec <- all is.numeric() columns in the tibble
+    # All possible numeric variables, not including the time variables
+    num_var_vec <- c("AGEP", "GASP", "GRPIP", "JWMNP")
   }
   if (cat_var_vec[1] == "all") {
-    # cat_var_vec <- all is.character() columns in the tibble
+    # All possible categorical variables
+    cat_var_vec <- c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX")
   }
   
   for (var in num_var_vec) {
+    # Check that the numeric variable is actually in the tibble
     if (var %in% names(data)) {
       # Calculate the sample mean for the numeric variable
       summary_list[paste0(var,"_mean")] <- 
-        sum(data[,var] * data$PWGTP) / sum(data$PWGTP)
+        sum(data[,var] * data$PWGTP, na.rm = TRUE) / sum(data$PWGTP)
       
       # Calculate the sample standard deviation for the numeric variable
       sd_mean <- summary_list[[paste0(var,"_mean")]]
       summary_list[paste0(var, "_sd")] <- 
-        sqrt(sum(data$PWGTP*(data[,var] - sd_mean)^2)/ (sum(data$PWGTP) - 1))
+        sqrt(sum(data$PWGTP*(data[,var] - sd_mean)^2, na.rm=TRUE)/ 
+               (sum(data$PWGTP) - 1))
         
     }
   }
   
   # Counting the the categorical variables
   for (var in cat_var_vec) {
-    summary_list[[paste0(var,"_count")]] <- data |> 
-      group_by(data[,var]) |>
-      summarise(count = sum(PWGTP))
+    # Check that the categorical variable is actually in the tibble
+    if (var %in% names(data)) {
+      summary_list[[paste0(var,"_count")]] <- data |> 
+        group_by(data[,var]) |>
+        summarise(count = sum(PWGTP))
+    }
   }
   
   # return the values as a named list
   return(summary_list)
 }
+```
 
-summary(census_data, c("AGEP","GASP"), c("SEX","FER"))
+```{r}
+summary(test_tibble, c("all"), c("all"))
 ```
 
 ## Plot Function
@@ -864,12 +890,12 @@ Requires the user to specify one categorical variable and one numeric variable f
 plot.census <- function(data, cat_var, num_var) {
   ggplot(data, 
          aes(x = get(cat_var), y = get(num_var), weight = PWGTP)) +
-  geom_boxplot() +
+  geom_boxplot(na.rm = TRUE) +
     labs(title = paste(num_var, "Boxplots Grouped By", cat_var, sep=" "),
          x = cat_var, y = num_var)
 }
 ```
 
 ```{r}
-plot(census_data, "FER", "AGEP")
+plot(test_tibble, "SCH", "JWMNP")
 ```
