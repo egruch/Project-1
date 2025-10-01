@@ -694,37 +694,41 @@ JWDP_dict <-  c(
 
 ```{r}
 call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
-  if (!is.numeric(year) | year < 2010 | year > 2022) {
+  if (!is.numeric(year) | year < 2010 | year > 2022 | year == 2020) {
   
-    stop("year input invalid!") 
+    stop("Year input invalid!") 
     
   } else if (!is.element("PWGTP", num_vars)) {
   
-    stop("numeric variables does not contain PWGTP") 
+    stop("Numeric variables does not contain PWGTP") 
     
   } else if (length(num_vars) < 2) {
     
-    stop("must enter more than one numeric variable")
+    stop("Must enter more than one numeric variable")
     
   } else if ( !all(num_vars %in% c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", 
                              "JWDP", "JWMNP"))) {
-    stop("entered an invalid numeric variable")
+    stop("Entered an invalid numeric variable")
     
   } else if (!all(char_var %in% c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", 
                              "SCHL", "SEX"))) {
     
-    stop("entered  an invaild character varaible") 
+    stop("Entered  an invaild character variable") 
+    
+  } else if (("HISPEED" %in% char_var | "JWTRNS" %in% char_var) & 
+             (year == 2019 | year == 2021)) {
+    stop("No data for HISPEED or JWTRNS in 2019 or 2021")
     
   } else if (!all(geo_level %in% c("state","division", "region", "all"))) {
     
-    stop("entered an invalid geography level")
+    stop("Entered an invalid geography level")
     
   }  else if (!(geo_subset %in%
              c(names(state_dict),names(division_dict), 
                names(region_dict))
              )) {
   
-    stop("entered an invalid geography subset")
+    stop("Entered an invalid geography subset")
   
   } else {
     
@@ -816,14 +820,10 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), char_var = c("SEX
 ```{r}
 test_tib <- call_API(2022, 
                      c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP","JWDP", "JWMNP"),
-                     c("FER", "HHL", "SCH", "SCHL", "SEX"),
+                     c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX"),
                      "state", 
                      "09")
 test_tib
-
-# These variables only work on 2019 and 2021 and cause error otherwise
-# HISPEED, JWTRNS
-# Seems to be no data on 2020
 
 #test_tib |>
 #  mutate(
