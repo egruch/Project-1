@@ -15,13 +15,27 @@ library(hms)
 
 # Introduction
 
-Introduction about what we are doing, discussion of what you are about to do and why/how, etc.
+"Must have a narrative throughout the document. A story or thread that flows throughout the document."
+
+"Introduction about what we are doing, discussion of what you are about to do and why/how, etc."
+
+"This is a partner project that involves creating functions to query an API and summarize and display data."
+
+"Our overall goal is to write functions that will manipulate and process data sets that come from a census API."
+
+"We want the user to choose certain variables to return and choose certain conditions on what is returned (specific subsets)."
 
 ## Data
 
 Maybe write anything about the API and data itself.
 
+"We are going to query the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data."
+
+PWGTP represents the number of observations (people) for a particular row.
+
 # Data Processing
+
+"Goal is to write a function to query this API and return a nicely formatted tibble."
 
 ## Helper Function
 
@@ -932,9 +946,9 @@ call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), ch
 ```
 
 ```{r}
-test_tibble <- call_API_mult_years(c(2019,2021, 2022),
-                                   c("PWGTP", "AGEP","GASP", "JWAP","JWDP",
-                                     "GRPIP", "JWMNP"),
+test_tibble <- call_API_mult_years(c(2022),
+                                   c("PWGTP", "AGEP","GASP", "GRPIP", "JWAP",
+                                     "JWDP", "JWMNP"),
                                    c("SEX","FER", "HHL", "HISPEED", "JWTRNS",
                                      "SCH", "SCHL"),
                                    "state",
@@ -998,14 +1012,19 @@ summary.census <- function(data,
 ```
 
 ```{r}
+# should work for both single and multi year functions
 summary(test_tibble, c("all"), c("all"))
 ```
 
 ## Plot Function
 
+Our own custom plot function.
+
 Code for creating a plot for a census class tibble with ggplot
 
 Requires the user to specify one categorical variable and one numeric variable for plotting purposes.
+
+"Weight = PWGTP argument accounts for the weights when making the plots."
 
 ```{r}
 # Assumes that column names will be passed as strings. 
@@ -1021,3 +1040,13 @@ plot.census <- function(data, cat_var, num_var) {
 ```{r}
 plot(test_tibble, "SCH", "JWMNP")
 ```
+
+## Examples of Using the Functions
+
+Give more examples.
+
+"You should have a section at the end where you investigate something interesting from the data using your API function and plotting/summarizing functions."
+
+(We also need to make the website).
+
+(Submission link - give link to your nicely rendered webpage!)
