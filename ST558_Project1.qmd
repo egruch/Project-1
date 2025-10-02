@@ -1074,9 +1074,13 @@ API_call_multi_year <- call_API_mult_years(c(2016:2018),
 API_call_multi_year
 ```
 
+# Data Manipulation 
+
 ## Summary Function
 
-We can write our own custom summary function with the tibble that has a class of "census".
+Now that we have the ability to pull data and in a nice clean format, we can write our own custom summary function with the tibble so we can gain insights about the data we are pulling.
+
+Like our past function, this function checks the user's inputs to make sure they are valid. For numeric variables this function produces mean and standard deviation summaries and for categorical variables this function produces count summaries.
 
 ```{r}
 # Write function that produces means and std devs for numeric variables
@@ -1144,6 +1148,8 @@ summary.census <- function(data,
 }
 ```
 
+Let's test our function and produce some summaries.
+
 ```{r}
 # should work for both single and multi year functions
 summary(API_call_multi_year, c("all"), c("all"))
@@ -1151,7 +1157,6 @@ summary(API_call_multi_year, c("all"), c("all"))
 
 ## Plot Function
 
-Our own custom plot function.
 
 Code for creating a plot for a census class tibble with ggplot
 
@@ -1169,6 +1174,8 @@ plot.census <- function(data, cat_var, num_var) {
          x = cat_var, y = num_var)
 }
 ```
+
+Let's make some plots!
 
 ```{r}
 # Plotting the Travel Time to Work by Household Language
