@@ -960,7 +960,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
   }
 
   # Use the helper function to query the API with the URL, then make a tibble
-  API_data <- api_tibble(httr::GET(my_url))
+  API_data <- api_tibble(my_url)
  
   # Using dictionaries to convert the values in the character variables
   # Then converting those character type columns to factors
@@ -1029,12 +1029,14 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
 }
 ```
 
-Let's test calling the API.
+Let's test calling the API using out new function!
+
+As you can see this takes the information we want very nicely and outputs all the variables in a usable format. This saves us time as their are many combinations of variables we could ask for and we don't need to uniquely parsing and converting our data.
 
 ```{r}
 test_tib <- call_API(2021, 
                      c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP"),
-                     c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX"),
+                     c("FER", "HHL", "SCH", "SCHL", "SEX"),
                      "state", 
                      "09")
 test_tib
@@ -1042,7 +1044,7 @@ test_tib
 
 ## Multiple Year Function
 
-Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
+In this section we creates a function that allows the user to specify multiple years of data (using the same constraints of what can be called as above). For every year inputted, the function calls the single year function and combines the tibbles into one data set.
 
 ```{r}
 call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
@@ -1051,25 +1053,27 @@ call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), ch
     if (first) {
       multi_year_tibble <- call_API(year, num_vars, char_var, 
                                     geo_level, geo_subset)
-      multi_year_tibble['Year'] <- year
+      multi_year_tibble['Year'] <- year #saves in a new column which year is pulled
       first <- FALSE
     } else {
       single_year_tibble <- call_API(year, num_vars, char_var, 
-                                     geo_level, geo_subset)
+                                     geo_level, geo_subset) #use single year function to call API
       single_year_tibble['Year'] <- year
       multi_year_tibble <- dplyr::bind_rows(multi_year_tibble,
-                                            single_year_tibble)
+                                            single_year_tibble) #combine tibbles 
     }
   }
   return(multi_year_tibble)
 }
 ```
 
+Let's test it!
+
 ```{r}
-test_tibble <- call_API_mult_years(c(2019, 2021),
+test_tibble <- call_API_mult_years(c(2019, 2021, 2022),
                                    c("PWGTP", "AGEP","GASP", "GRPIP", "JWAP",
                                      "JWDP", "JWMNP"),
-                                   c("SEX","FER", "HHL", "HISPEED", "JWTRNS",
+                                   c("SEX","FER", "HHL",
                                      "SCH", "SCHL"),
                                    "state",
                                    "09")
