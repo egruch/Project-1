@@ -4,71 +4,77 @@ format: html
 editor: visual
 ---
 
+By Ella Gruchacz and Kevin Kronk
+
 # Load Libraries
 
 ```{r}
+#| warning: false
 # Load in the tidyverse libraries
 library(tidyverse)
 library(lubridate)
 library(hms)
 ```
 
-NARRATIVE: ADDRESS WHAT FUNCTION DOES GENERALLY. THEN IN COMMENTS ADDRESS MINOR DETAILS.
-
-HAVE EXAMPLES OF OUTPUT AND DESCRIBE IT.
-
 # Introduction
 
-"Must have a narrative throughout the document. A story or thread that flows throughout the document."
-
-"Introduction about what we are doing, discussion of what you are about to do and why/how, etc."
-
-"This is a partner project that involves creating functions to query an API and summarize and display data."
-
-"Our overall goal is to write functions that will manipulate and process data sets that come from a census API."
-
-"We want the user to choose certain variables to return and choose certain conditions on what is returned (specific subsets)."
+In this project we will use our ability to create custom functions to call census APIs. Calling an API requires building the specific URL with all the variables and subsets you want in the correct format of a URL. Creating a custom function allows us to easily input which variables and subsets we want without having to worry about creating a URL in the correct format every time. Additionally, there are a few steps after creating the URL to properly parse the data and transform it into a usable data set. Creating a function allows us to streamline this process. Finally, we want to manipulate the data so we can glean insights so we can make custom functions to output the type of summaries we will always want to see with our census data. Overall, our goal is to write functions that will manipulate and process data sets that come from a census API.
 
 ## Data
 
-Maybe write anything about the API and data itself.
+The data we are working with is American Community Survey 1-Year Estimates Public Use Microdata Sample or PUMS Census data. This is survey data is pseudo personal-level data that was collected from 2005-2019 and 2021-2023. This is publicly available data we can call at anytime. In this project we will **not** be working with all the variables collected from the survey. We will only call data from the years 2010 to 2022. The variables we will be calling in our functions are as follows:
 
-"We are going to query the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data."
+-   AGEP - Age
+-   GASP - Gas cost
+-   GRPIP - Gross rent
+-   JWAP - Time of arrival at work
+-   JWDP - Time of departure for work
+-   JWMNP - Travel time to work
+-   PWGTP - PUMS person weight (the number of observations (people) for a particular row)
+-   FER - Gave birth to child within the past 12 months
+-   HHL - Household language
+-   HISPEED - Broadband (high speed) Internet service such as cable, fiber optic, or DSL service
+-   JWTRNS - Means of transportation to work
+-   SCH - School enrollment
+-   SCHL - Educational attainment
+-   SEX - Sex
 
-PWGTP represents the number of observations (people) for a particular row.
+Finally, we can specify the geography level of this data to be either state, region, division, or all. For each of the levels we can specify a subgroup to narrow down the data by that level.
 
 # Data Processing
 
-"Goal is to write a function to query this API and return a nicely formatted tibble."
+In this section we will be accomplishing our goal of data processing the census API by creating functions to query this API and return a nicely formatted tibble.
 
 ## Helper Function
 
-Getting the usual process to work with a given URL
+The first custom function we created is a helper function that works with a given URL and outputs a tibble. This is a simple helper function because it takes the URL directly, does not build it for you, and outputs the data in the columns as is.
 
-Next, write a helper function to take what is returned by GET() and turn it into a nice tibble.
+```{r}
+# Helper function to take what is returned by GET() and turn it into a tibble
+api_tibble <- function(my_url) {
+  GET_output <- httr::GET(my_url)
+  census_parsed <- jsonlite::fromJSON(rawToChar(GET_output$content)) #parse JSON content to character variables 
+  
+  colnames(census_parsed) <- census_parsed[1,] #finds column names and assigns them
+  census_parsed <- census_parsed[-1,] #remove first row (column names)
+  census_tibble <- as_tibble(census_parsed) #transform to tibble
+  class(census_tibble) <- c("census", class(census_tibble)) #make tibble a census class
+  return(census_tibble)
+}
+
+```
 
 ```{r}
 APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,JWAP,MAR&SCHL=24&for=state:09&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
 
-# Helper function to take what is returned by GET() and turn it into a tibble
-api_tibble <- function(GET_output) {
-  census_parsed <- jsonlite::fromJSON(rawToChar(GET_output$content))
-  
-  colnames(census_parsed) <- census_parsed[1,]
-  census_parsed <- census_parsed[-1,]
-  census_tibble <- as_tibble(census_parsed)
-  class(census_tibble) <- c("census", class(census_tibble))
-  return(census_tibble)
-}
-
-api_tibble(httr::GET(APIurl))
+api_tibble(APIurl)
 ```
 
 ## Single Year Function
 
-Write a function to query the API that allows the user to change the following items: (see project outline).
+In this section we created a function that pulls one year of PUMS census data. This function allows you to input the year, numeric variables, categorical variables, and geography level/subsets and will build the URL, call the API, and then transform all the variables into their appropriate type, numeric, factor, or time. Additionally, this function runs checks on your inputs to ensure you have only asked for data as outline above.
 
-Dictionaries
+Dictionaries: Many of the variables in our data get pulled from the API as their "key" value rather than their true value. Below stores all of the variable's key values and their associated true value. We will use these later on in our function to properly replace the values that get pulled into their true form which we will then be able to manipulate and calculate summaries on.
 
 ```{r}
 # There are redundant enties for these dictionaries
@@ -877,29 +883,39 @@ JWDP_dict <-  c(
 )
 ```
 
+Here we create the actual function. The main components of the function are as follows 1. Checks the user input and stops the function if invalid 2. Takes user inputs and builds a URL 3. Used the helper function to call the API and return a tibble 4. Convert variables to true values (if needed) and convert to appropriate types including factors, numeric, and time.
+
+Other notes about the function:
+
+Default inputs are year = 2022, numeric variables are PWGTP and AGEP, categorical variable is SEX, geography level is state at subset 09 (Connecticut).
+
+PWGTP must be called and there must be more than one numeric varaible.
+
+At least one categorical variable must be called.
+
 ```{r}
 # specify the number of variables to be returned
 call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX"), geo_level = "state", geo_subset = "09") {
   if (!is.numeric(year) | year < 2010 | year > 2022 | year == 2020) {
   
-    stop("Year input invalid!") 
+    stop("Year input invalid!")  #checks input of year is numeric and between 2010 and 2022 and is not 2020. 
     
   } else if (!is.element("PWGTP", num_vars)) {
   
-    stop("Numeric variables does not contain PWGTP") 
+    stop("Numeric variables does not contain PWGTP") #check PWGTP is called
     
   } else if (length(num_vars) < 2) {
     
-    stop("Must enter more than one numeric variable")
+    stop("Must enter more than one numeric variable") #check more than 1 numeric variable
     
   } else if (!all(num_vars %in% c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", 
                              "JWDP", "JWMNP"))) {
     
-    stop("Entered an invalid numeric variable")
+    stop("Entered an invalid numeric variable") #checks a valid numeric variable is called
     
   } else if (!all(cat_vars %in% c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", 
                              "SCHL", "SEX"))) {
-    stop("Entered an invalid character variable")
+    stop("Entered an invalid categorical variable") #checks a valid categorical is called
     
   } else if (length(cat_vars) < 1) {
      
@@ -908,23 +924,23 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
   } else if (("HISPEED" %in% cat_vars | "JWTRNS" %in% cat_vars) & 
              !(year %in% c(2019, 2021))) {
     
-    stop("HISPEED and JWTRNS only have data for 2019 and 2021")
+    stop("HISPEED and JWTRNS only have data for 2019 and 2021") #checks HISPEED and JWTRNS are not called when year is 2019 or 2021
     
   } else if (!all(geo_level %in% c("state", "division", "region", "all"))) {
     
-    stop("Entered an invalid geography level")
+    stop("Entered an invalid geography level") #checks a valid geography level is entered
     
   }  else if ((geo_level == "state" & !(geo_subset %in% names(state_dict))) | 
               (geo_level == "division" & !(geo_subset %in% names(division_dict))) |
               (geo_level == "region" & !(geo_subset %in% names(region_dict)))) {
     
-    stop("Entered an invalid geography subset")
+    stop("Entered an invalid geography subset") #uses geo_subset dictionary to check a valid subset value was inputted
   
   } else {
     
     geo_paste <- ifelse(geo_level == "all", "",
                         paste0("&for=",geo_level,":",
-                        geo_subset))
+                        geo_subset)) #parses geo level information if inputted
     
     my_url <- paste0("https://api.census.gov/data/",
                      year,
@@ -933,12 +949,12 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
                      ",",
                      paste(num_vars,collapse =","),
                      geo_paste,
-                     "&key=51fa8d7040e7bff1dae932352f6b998a4678a557")
+                     "&key=51fa8d7040e7bff1dae932352f6b998a4678a557") #buils URL with user inputs
     
   }
 
   # Use the helper function to query the API with the URL, then make a tibble
-  API_data <- api_tibble(httr::GET(my_url))
+  API_data <- api_tibble(my_url)
  
   # Using dictionaries to convert the values in the character variables
   # Then converting those character type columns to factors
@@ -952,6 +968,9 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
       mutate(!!var := as.factor(get(paste0(var, "_dict"))[get(var)]))
   }
   
+  #Using dictionaries to convert values to string that is a range of time 
+  #Splits string and transforms into a time type format
+  #Finds the middle of the two times and saves it
   for (var in num_vars[(num_vars == "JWAP") |
                        (num_vars == "JWDP")]) {
     API_data <- API_data |>
@@ -969,7 +988,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
           format = "%I:%M %p")),
         !!var :=  as_hms(time_1 + (time_2 - time_1)/2)
         ) |>
-      select(-starts_with("time"))
+      select(-starts_with("time")) #removes variables made that are ends of the time interval 
        
   }
   
@@ -1004,10 +1023,14 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
 }
 ```
 
+Let's test calling the API using out new function!
+
+As you can see this takes the information we want very nicely and outputs all the variables in a usable format. This saves us time as their are many combinations of variables we could ask for and we don't need to uniquely parsing and converting our data.
+
 ```{r}
 test_tib <- call_API(2021, 
                      c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP"),
-                     c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX"),
+                     c("FER", "HHL", "SCH", "SCHL", "SEX"),
                      "state", 
                      "09")
 test_tib
@@ -1015,7 +1038,7 @@ test_tib
 
 ## Multiple Year Function
 
-Write a function that allows the user to specify multiple years of survey data (and all the other options above). Calls the single year function as many times as needed and then combines the data into one final tibble (with a year variable included).
+In this section we creates a function that allows the user to specify multiple years of data (using the same constraints of what can be called as above). For every year inputted, the function calls the single year function and combines the tibbles into one data set.
 
 ```{r}
 call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
@@ -1024,19 +1047,21 @@ call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), ch
     if (first) {
       multi_year_tibble <- call_API(year, num_vars, char_var, 
                                     geo_level, geo_subset)
-      multi_year_tibble['Year'] <- year
+      multi_year_tibble['Year'] <- year #saves in a new column which year is pulled
       first <- FALSE
     } else {
       single_year_tibble <- call_API(year, num_vars, char_var, 
-                                     geo_level, geo_subset)
+                                     geo_level, geo_subset) #use single year function to call API
       single_year_tibble['Year'] <- year
       multi_year_tibble <- dplyr::bind_rows(multi_year_tibble,
-                                            single_year_tibble)
+                                            single_year_tibble) #combine tibbles 
     }
   }
   return(multi_year_tibble)
 }
 ```
+
+Let's test it!
 
 ```{r}
 API_call_multi_year <- call_API_mult_years(c(2016:2018),
