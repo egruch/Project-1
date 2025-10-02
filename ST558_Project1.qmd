@@ -1085,12 +1085,11 @@ API_call_multi_year <- call_API_mult_years(c(2016:2018),
 API_call_multi_year
 ```
 
-# Data Manipulation 
+# Data Manipulation
 
 ## Summary Function
 
 Now that we have the ability to pull data and in a nice clean format, we can write our own custom summary function for a tibble that has a class of "census". This allows us to call the summary() function on our API call tibbles. The default is to give a summary for all numerical and categorical variables, but the user can also specify what they want to see. For numerical variables we find the sample mean and sample standard deviation. For the time variables we do this by converting them to seconds (from the start of the day). The categorical variables are counted up for each value the variable can take on, like how many "Males" or "Females" are there. The summaries are returned as a named list.
-
 
 ```{r}
 # Produces means and std devs for numeric variables
@@ -1160,7 +1159,6 @@ summary.census <- function(data,
 }
 ```
 
-
 Time to test the summary function on both the multi year API call and the single year API call functions.
 
 ```{r}
@@ -1176,7 +1174,6 @@ summary(test_tib, c("AGEP"), c("FER"))
 ## Plot Function
 
 Finally, lets create our own custom plot function so we can visualize the data. Code for creating a plot for a census class tibble with ggplot. Requires the user to specify one categorical variable and one numeric variable for plotting purposes. The PWGTP variable accounts for the weights when making the plots.
-
 
 ```{r}
 # Assumes that column names will be passed as strings. 
