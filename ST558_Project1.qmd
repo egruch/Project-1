@@ -9,6 +9,7 @@ By Ella Gruchacz and Kevin Kronk
 # Load Libraries
 
 ```{r}
+#| warning: false
 # Load in the tidyverse libraries
 library(tidyverse)
 library(lubridate)
@@ -23,20 +24,21 @@ In this project we will use our ability to create custom functions to call censu
 ## Data
 
 The data we are working with is American Community Survey 1-Year Estimates Public Use Microdata Sample or PUMS Census data. This is survey data is pseudo personal-level data that was collected from 2005-2019 and 2021-2023. This is publicly available data we can call at anytime. In this project we will **not** be working with all the variables collected from the survey. We will only call data from the years 2010 to 2022. The variables we will be calling in our functions are as follows:
-AGEP - Age 
-GASP - Gas cost 
-GRPIP - Gross rent
-JWAP - Time of arrival at work
-JWDP - Time of departure for work
-JWMNP - Travel time to work
-PWGTP - PUMS person weight (the number of observations (people) for a particular row)
-FER - Gave birth to child within the past 12 months
-HHL - Household language
-HISPEED - Broadband (high speed) Internet service such as cable, fiber optic, or DSL service
-JWTRNS - Means of transportation to work
-SCH - School enrollment
-SCHL - Educational attainment
-SEX - Sex
+
+* AGEP - Age 
+* GASP - Gas cost 
+* GRPIP - Gross rent
+* JWAP - Time of arrival at work
+* JWDP - Time of departure for work
+* JWMNP - Travel time to work
+* PWGTP - PUMS person weight (the number of observations (people) for a particular row)
+* FER - Gave birth to child within the past 12 months
+* HHL - Household language
+* HISPEED - Broadband (high speed) Internet service such as cable, fiber optic, or DSL service
+* JWTRNS - Means of transportation to work
+* SCH - School enrollment
+* SCHL - Educational attainment
+* SEX - Sex
 
 Finally, we can specify the geography level of this data to be either state, region, division, or all. For each of the levels we can specify a subgroup to narrow down the data by that level.
 
