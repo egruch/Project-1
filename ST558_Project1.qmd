@@ -1039,15 +1039,14 @@ call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), ch
 ```
 
 ```{r}
-test_tibble <- call_API_mult_years(c(2019, 2021),
-                                   c("PWGTP", "AGEP","GASP", "GRPIP", "JWAP",
-                                     "JWDP", "JWMNP"),
-                                   c("SEX","FER", "HHL", "HISPEED", "JWTRNS",
-                                     "SCH", "SCHL"),
-                                   "state",
-                                   "09")
+API_call_multi_year <- call_API_mult_years(c(2016:2018),
+                                           c("PWGTP", "AGEP","GASP", "GRPIP", 
+                                             "JWAP","JWDP", "JWMNP"),
+                                           c("SEX","FER", "HHL", "SCH", "SCHL"),
+                                           "state",
+                                           "09")
 
-test_tibble
+API_call_multi_year
 ```
 
 ## Summary Function
@@ -1065,7 +1064,7 @@ summary.census <- function(data,
   # and all categorical variables in the tibble
   # User should be able to specify the variables they'd like to summarize
   if (!all(num_var_vec %in% c("AGEP", "GASP", "GRPIP", "JWAP", 
-                           "JWDP", "JWMNP", "all"))) {
+                              "JWDP", "JWMNP", "all"))) {
     
     stop("Entered an invalid numeric variable to summarize")
     
@@ -1077,7 +1076,7 @@ summary.census <- function(data,
   
   if (num_var_vec[1] == "all") {
     # All possible numeric variables, not including the time variables
-    num_var_vec <- c("AGEP", "GASP", "GRPIP", "JWMNP")
+    num_var_vec <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP")
   }
   if (cat_var_vec[1] == "all") {
     # All possible categorical variables
@@ -1087,6 +1086,11 @@ summary.census <- function(data,
   for (var in num_var_vec) {
     # Check that the numeric variable is actually in the tibble
     if (var %in% names(data)) {
+      # Convert the time variables to numeric
+      # This will represent seconds (from the start of the day)
+      if (var == "JWAP" | var == "JWDP") {
+        data[[var]] <- as.numeric(data[[var]])
+      } 
       # Calculate the sample mean for the numeric variable
       summary_list[paste0(var,"_mean")] <- 
         sum(data[,var] * data$PWGTP, na.rm = TRUE) / sum(data$PWGTP)
@@ -1117,7 +1121,7 @@ summary.census <- function(data,
 
 ```{r}
 # should work for both single and multi year functions
-summary(test_tibble, c("all"), c("all"))
+summary(API_call_multi_year, c("all"), c("all"))
 ```
 
 ## Plot Function
@@ -1142,15 +1146,69 @@ plot.census <- function(data, cat_var, num_var) {
 ```
 
 ```{r}
-plot(test_tibble, "SEX", "JWMNP")
+# Plotting the Travel Time to Work by Household Language
+plot(API_call_multi_year, "HHL", "JWMNP")
 ```
 
-## Examples of Using the Functions
+## PUMS Census API Data North Carolina Exploration
 
-Give more examples.
+Something we found interesting while working with this data is that the PUMS API appears to not have any data from 2020. It seems the data for that year was dropped due to Covid. So, we decided to explore if there was a difference in some of the data from 2019 to 2021, particularly for North Carolina.
 
-"You should have a section at the end where you investigate something interesting from the data using your API function and plotting/summarizing functions."
+We started by using our call_API_mult_years function to get data for all of the numerical and categorical variables for 2019 and 2021 from North Carolina.
 
-(We also need to make the website).
+```{r}
+# Looking at all variables from 2019 and 2021 for the state of NC
+NC_Census <- call_API_mult_years(c(2019, 2021),
+                                 c("PWGTP", "AGEP","GASP", "GRPIP", "JWAP",
+                                   "JWDP", "JWMNP"),
+                                 c("SEX","FER", "HHL", "HISPEED", "JWTRNS",
+                                   "SCH", "SCHL"),
+                                 "state",
+                                 "37")
 
-(Submission link - give link to your nicely rendered webpage!)
+NC_Census
+```
+
+As morbid as it may sound, lets compare the age (AGEP) distributions between 2019 and 2021, grouped by SEX. Did Covid have any impact on the average age in this census for North Carolina?
+
+```{r}
+# Plotting AGEP boxplots grouped by SEX for 2019
+plot(NC_Census[NC_Census$Year == 2019,], "SEX", "AGEP")
+```
+
+```{r}
+# Plotting AGEP boxplots grouped by SEX for 2021
+plot(NC_Census[NC_Census$Year == 2021,], "SEX", "AGEP")
+```
+
+They seem to be fairly similar, so either deaths from Covid were across age groups, or the census didn't capture an effect.
+
+Next we can look at high speed internet (HISPEED) ownership against the gross rent as a percent of household income for the past 12 months (GRPIP). Someone with a lower GRPIP is more likely to be well off, though you could argue that more well off people just end up renting more expensive apartments. Regardless, the main conjecture is that perhaps staying in from Covid led to more people getting high speed internet.
+
+```{r}
+# Plotting GRPIP boxplots grouped by HISPEED for 2019
+plot(NC_Census[NC_Census$Year == 2019,], "HISPEED", "GRPIP")
+```
+
+```{r}
+# Plotting GRPIP boxplots grouped by HISPEED for 2021
+plot(NC_Census[NC_Census$Year == 2021,], "HISPEED", "GRPIP")
+```
+
+It looks like the GRPIP for the yes to high speed internet group actually did increase slightly. Possibly indicating that even less well off people were still willing to get high speed internet during Covid.
+
+Let's look at the summary statistics.
+
+```{r}
+# Getting the mean and sd of GRPIP and the counts for HISPEED from 2019
+summary(NC_Census[NC_Census$Year == 2019,], c("GRPIP"), c("HISPEED"))
+```
+
+```{r}
+# Getting the mean and sd of GRPIP and the counts for HISPEED from 2021
+summary(NC_Census[NC_Census$Year == 2021,], c("GRPIP"), c("HISPEED"))
+```
+
+We can see that the number of people with no internet or no high speed internet decreased from 2019 to 2021, and the number with high speed internet increased. This supports our general conjecture. The mean GRPIP went down, which means that either people were making more income by 2021, or rent prices had gone down.
+
+This demonstrates the kind of quick analysis you could perform on data from an API using our functions to query the API, summarize the data, and plot it.
