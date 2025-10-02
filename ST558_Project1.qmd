@@ -22,7 +22,7 @@ In this project we will use our ability to create custom functions to call censu
 
 ## Data
 
-The data we are working with is American Community Survey 1-Year Estimates Public Use Microdata Sample or PUMS Census data. This is survey data is pseudo personal-level data that was collected from 2005-2019 and 2021-2023. This is publicly available data we can call at anytime. In this project we will **not** be working with all the variables collected from the survey. We will only call data from the years 2010 to 2022. The variables we will be calling in our functions are as follows:
+The data we are working with is American Community Survey 1-Year Estimates Public Use Microdata Sample or PUMS Census data. This survey data is pseudo personal-level data that was collected from 2005-2019 and 2021-2023. This is publicly available data we can call at anytime. In this project we will **not** be working with all the variables collected from the survey. We will only call data from the years 2010 to 2022. The variables we will be calling in our functions are as follows:
 
 -   AGEP - Age
 -   GASP - Gas cost
@@ -65,6 +65,7 @@ api_tibble <- function(my_url) {
 ```
 
 ```{r}
+#An example of using the api_tibble function to query the API and make a tibble
 APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,JWAP,MAR&SCHL=24&for=state:09&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
 
 api_tibble(APIurl)
@@ -77,7 +78,7 @@ In this section we created a function that pulls one year of PUMS census data. T
 Dictionaries: Many of the variables in our data get pulled from the API as their "key" value rather than their true value. Below stores all of the variable's key values and their associated true value. We will use these later on in our function to properly replace the values that get pulled into their true form which we will then be able to manipulate and calculate summaries on.
 
 ```{r}
-# There are redundant enties for these dictionaries
+# There are redundant entries for these dictionaries
 # For example, the API would on some years use "09" and others "9"
 
 # Categorical Variables
@@ -889,7 +890,7 @@ Other notes about the function:
 
 Default inputs are year = 2022, numeric variables are PWGTP and AGEP, categorical variable is SEX, geography level is state at subset 09 (Connecticut).
 
-PWGTP must be called and there must be more than one numeric varaible.
+PWGTP must be called and there must be more than one numeric variable.
 
 At least one categorical variable must be called.
 
@@ -934,7 +935,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
               (geo_level == "division" & !(geo_subset %in% names(division_dict))) |
               (geo_level == "region" & !(geo_subset %in% names(region_dict)))) {
     
-    stop("Entered an invalid geography subset") #uses geo_subset dictionary to check a valid subset value was inputted
+    stop("Entered an invalid geography subset") #uses geo_subset dictionaries to check a valid subset value was inputted
   
   } else {
     
@@ -949,7 +950,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
                      ",",
                      paste(num_vars,collapse =","),
                      geo_paste,
-                     "&key=51fa8d7040e7bff1dae932352f6b998a4678a557") #buils URL with user inputs
+                     "&key=51fa8d7040e7bff1dae932352f6b998a4678a557") #builds URL with user inputs
     
   }
 
@@ -959,7 +960,8 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
   # Using dictionaries to convert the values in the character variables
   # Then converting those character type columns to factors
   for (var in c(cat_vars, geo_level)) {
-    if (var == 'all') {
+    # Don't make a geo_level column if using "all"
+    if (var == "all") {
       next
     }
     API_data <- API_data |> 
@@ -992,24 +994,27 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
        
   }
   
-  # Go through the rest of the numerical variables and replace values
-    for (var in num_vars[(num_vars != "PWGTP") &
+  # Go through the rest of the numerical variables and replace values for NA
+  for (var in num_vars[(num_vars != "PWGTP") &
                        (num_vars != "JWAP") &
                        (num_vars != "JWDP")]) {
     if (var == "AGEP") {
       API_data <- API_data |>
-        mutate(!!var := ifelse(get(var) %in% c("0", "00"), NA, get(var)))
+      # If AGEP has "0" or "00" then make it NA, otherwise keep value
+      mutate(!!var := ifelse(get(var) %in% c("0", "00"), NA, get(var)))
     } else if (var == "GASP") {
       API_data <- API_data |>
-        mutate(!!var := ifelse(get(var) %in% c("0", "1", "2", "3", 
-                                               "001", "002", "003"), 
-                               NA, get(var)))
+      # If GASP is one of these then make it NA, otherwise keep value
+      mutate(!!var := ifelse(get(var) %in% c("0", "1", "2", "3", 
+                                             "001", "002", "003"),
+                             NA, get(var)))
     } else if (var == "GRPIP") {
       API_data <- API_data |>
-        mutate(!!var := ifelse(get(var) == "0", NA,
-                               ifelse(get(var) == "101", NA, get(var))))
+        # If GRPIP is one of these then make it NA, otherwise keep value
+        mutate(!!var := ifelse(get(var) %in% c("0", "101"), NA, get(var)))
     } else if (var == "JWMNP") {
       API_data <- API_data |>
+        # If JWMNP is "0" then make it NA, otherwise keep value
         mutate(!!var := ifelse(get(var) == "0", NA, get(var)))
     }
   }
@@ -1023,9 +1028,9 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
 }
 ```
 
-Let's test calling the API using out new function!
+Let's test calling the API using our new function!
 
-As you can see this takes the information we want very nicely and outputs all the variables in a usable format. This saves us time as their are many combinations of variables we could ask for and we don't need to uniquely parsing and converting our data.
+As you can see this takes the information we want very nicely and outputs all the variables in a usable format. This saves us time as there are many combinations of variables we could ask for and we don't need to be uniquely parsing and converting our data.
 
 ```{r}
 test_tib <- call_API(2021, 
@@ -1038,21 +1043,27 @@ test_tib
 
 ## Multiple Year Function
 
-In this section we creates a function that allows the user to specify multiple years of data (using the same constraints of what can be called as above). For every year inputted, the function calls the single year function and combines the tibbles into one data set.
+In this section we create a function that allows the user to specify multiple years of data (using the same constraints of what can be called as above). For every year inputted, the function calls the single year function and combines the tibbles into one data set.
 
 ```{r}
+# Calls the single year call_API function for every year passed in
 call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), char_var = c("SEX"), geo_level = "state", geo_subset = "09") {
   first <- TRUE
+  # Goes through each year in years vector
   for (year in years) {
+    # For the first year set up the multi_year_tibble
     if (first) {
       multi_year_tibble <- call_API(year, num_vars, char_var, 
                                     geo_level, geo_subset)
       multi_year_tibble['Year'] <- year #saves in a new column which year is pulled
+      # Set to false so we don't overwrite the multi_year_tibble with one year
       first <- FALSE
     } else {
+      # For every additional year use the single_year_tibble
       single_year_tibble <- call_API(year, num_vars, char_var, 
                                      geo_level, geo_subset) #use single year function to call API
       single_year_tibble['Year'] <- year
+      # Adds the rows from the single_year_tibble to the multi for each year
       multi_year_tibble <- dplyr::bind_rows(multi_year_tibble,
                                             single_year_tibble) #combine tibbles 
     }
@@ -1076,18 +1087,18 @@ API_call_multi_year
 
 ## Summary Function
 
-We can write our own custom summary function with the tibble that has a class of "census".
+We can write our own custom summary function for a tibble that has a class of "census". This allows us to call the summary() function on our API call tibbles. The default is to give a summary for all numerical and categorical variables, but the user can also specify what they want to see. For numerical variables we find the sample mean and sample standard deviation. For the time variables we do this by converting them to seconds (from the start of the day). The categorical variables are counted up for each value the variable can take on, like how many "Males" or "Females" are there. The summaries are returned as a named list.
 
 ```{r}
-# Write function that produces means and std devs for numeric variables
+# Produces means and std devs for numeric variables
 # and counts for categorical variables. 
 summary.census <- function(data, 
                            num_var_vec = c("all"), 
                            cat_var_vec = c("all")) {
+  # By default, summarizes all numeric and categorical variables (other than PWGTP)
+  # User can also specify the variables they'd like to summarize
   summary_list <- list()
-  # By default, summarize all numeric variables (other than PWGTP)
-  # and all categorical variables in the tibble
-  # User should be able to specify the variables they'd like to summarize
+  # Checks to make sure the variables are valid
   if (!all(num_var_vec %in% c("AGEP", "GASP", "GRPIP", "JWAP", 
                               "JWDP", "JWMNP", "all"))) {
     
@@ -1100,7 +1111,7 @@ summary.census <- function(data,
   }
   
   if (num_var_vec[1] == "all") {
-    # All possible numeric variables, not including the time variables
+    # All possible numeric variables, not including PWGTP
     num_var_vec <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP")
   }
   if (cat_var_vec[1] == "all") {
@@ -1116,11 +1127,11 @@ summary.census <- function(data,
       if (var == "JWAP" | var == "JWDP") {
         data[[var]] <- as.numeric(data[[var]])
       } 
-      # Calculate the sample mean for the numeric variable
+      # Calculate the sample mean for the numeric variables
       summary_list[paste0(var,"_mean")] <- 
         sum(data[,var] * data$PWGTP, na.rm = TRUE) / sum(data$PWGTP)
       
-      # Calculate the sample standard deviation for the numeric variable
+      # Calculate the sample standard deviation for the numeric variables
       sd_mean <- summary_list[[paste0(var,"_mean")]]
       summary_list[paste0(var, "_sd")] <- 
         sqrt(sum(data$PWGTP*(data[,var] - sd_mean)^2, na.rm=TRUE)/ 
@@ -1129,12 +1140,14 @@ summary.census <- function(data,
     }
   }
   
-  # Counting the the categorical variables
+  # Counting the categorical variables
   for (var in cat_var_vec) {
     # Check that the categorical variable is actually in the tibble
     if (var %in% names(data)) {
       summary_list[[paste0(var,"_count")]] <- data |> 
+        # Groups by the values the variable can take on
         group_by(data[,var]) |>
+        # Counts the total number of entries for that value using PWGTP
         summarise(count = sum(PWGTP))
     }
   }
@@ -1144,20 +1157,21 @@ summary.census <- function(data,
 }
 ```
 
+Time to test the summary function on both the multi year API call and the single year API call functions.
+
 ```{r}
-# should work for both single and multi year functions
-summary(API_call_multi_year, c("all"), c("all"))
+# Defaults to all for both numerical and categorical variables
+summary(API_call_multi_year)
+```
+
+```{r}
+# It also works with just the single year API call function
+summary(test_tib, c("AGEP"), c("FER"))
 ```
 
 ## Plot Function
 
-Our own custom plot function.
-
-Code for creating a plot for a census class tibble with ggplot
-
-Requires the user to specify one categorical variable and one numeric variable for plotting purposes.
-
-"Weight = PWGTP argument accounts for the weights when making the plots."
+Our own custom plot function. Code for creating a plot for a census class tibble with ggplot. Requires the user to specify one categorical variable and one numeric variable for plotting purposes. The PWGTP variable accounts for the weights when making the plots.
 
 ```{r}
 # Assumes that column names will be passed as strings. 
@@ -1234,6 +1248,6 @@ summary(NC_Census[NC_Census$Year == 2019,], c("GRPIP"), c("HISPEED"))
 summary(NC_Census[NC_Census$Year == 2021,], c("GRPIP"), c("HISPEED"))
 ```
 
-We can see that the number of people with no internet or no high speed internet decreased from 2019 to 2021, and the number with high speed internet increased. This supports our general conjecture. The mean GRPIP went down, which means that either people were making more income by 2021, or rent prices had gone down.
+We can see that the number of people with no internet or no high speed internet decreased from 2019 to 2021, and the number with high speed internet increased. This supports our general conjecture, though it could also be a natural increase over time unrelated to Covid. The mean GRPIP went down, which means that either people were making more income by 2021, or rent prices had gone down.
 
 This demonstrates the kind of quick analysis you could perform on data from an API using our functions to query the API, summarize the data, and plot it.
