@@ -13,6 +13,10 @@ library(lubridate)
 library(hms)
 ```
 
+NARRATIVE: ADDRESS WHAT FUNCTION DOES GENERALLY. THEN IN COMMENTS ADDRESS MINOR DETAILS.
+
+HAVE EXAMPLES OF OUTPUT AND DESCRIBE IT.
+
 # Introduction
 
 "Must have a narrative throughout the document. A story or thread that flows throughout the document."
@@ -44,7 +48,7 @@ Getting the usual process to work with a given URL
 Next, write a helper function to take what is returned by GET() and turn it into a nice tibble.
 
 ```{r}
-APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&for=state:09&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
+APIurl <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,JWAP,MAR&SCHL=24&for=state:09&key=51fa8d7040e7bff1dae932352f6b998a4678a557"
 
 # Helper function to take what is returned by GET() and turn it into a tibble
 api_tibble <- function(GET_output) {
@@ -669,23 +673,23 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
     
     stop("Must enter more than one numeric variable")
     
-  } else if ( !all(num_vars %in% c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", 
+  } else if (!all(num_vars %in% c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", 
                              "JWDP", "JWMNP"))) {
     
     stop("Entered an invalid numeric variable")
     
   } else if (!all(cat_vars %in% c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", 
                              "SCHL", "SEX"))) {
-    stop("Entered  an invaild character variable")
+    stop("Entered an invalid character variable")
     
   } else if (length(cat_vars) < 1) {
      
     stop("Must enter at least one categorical variable")
     
   } else if (("HISPEED" %in% cat_vars | "JWTRNS" %in% cat_vars) & 
-             (year == 2019 | year == 2021)) {
+             !(year %in% c(2019, 2021))) {
     
-    stop("No data for HISPEED or JWTRNS in 2019 or 2021")
+    stop("HISPEED and JWTRNS only have data for 2019 and 2021")
     
   } else if (!all(geo_level %in% c("state", "division", "region", "all"))) {
     
@@ -720,6 +724,9 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
   # Using dictionaries to convert the values in the character variables
   # Then converting those character type columns to factors
   for (var in c(cat_vars, geo_level)) {
+    if (var == 'all') {
+      next
+    }
     API_data <- API_data |> 
       # the !! := part allows you to use a "string" for a new variable name
       # get() takes a string and gets the corresponding dictionary or column
@@ -753,10 +760,12 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
                        (num_vars != "JWDP")]) {
     if (var == "AGEP") {
       API_data <- API_data |>
-        mutate(!!var := ifelse(get(var) == "0", NA, get(var)))
+        mutate(!!var := ifelse(get(var) %in% c("0", "00"), NA, get(var)))
     } else if (var == "GASP") {
       API_data <- API_data |>
-        mutate(!!var := ifelse(get(var) == "3", NA, get(var)))
+        mutate(!!var := ifelse(get(var) %in% c("0", "1", "2", "3", 
+                                               "001", "002", "003"), 
+                               NA, get(var)))
     } else if (var == "GRPIP") {
       API_data <- API_data |>
         mutate(!!var := ifelse(get(var) == "0", NA,
@@ -777,7 +786,7 @@ call_API <- function(year=2022, num_vars = c("PWGTP", "AGEP"), cat_vars = c("SEX
 ```
 
 ```{r}
-test_tib <- call_API(2022, 
+test_tib <- call_API(2021, 
                      c("PWGTP", "AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP"),
                      c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX"),
                      "state", 
@@ -811,7 +820,7 @@ call_API_mult_years <- function(years=c(2022), num_vars = c("PWGTP", "AGEP"), ch
 ```
 
 ```{r}
-test_tibble <- call_API_mult_years(c(2022),
+test_tibble <- call_API_mult_years(c(2019, 2021),
                                    c("PWGTP", "AGEP","GASP", "GRPIP", "JWAP",
                                      "JWDP", "JWMNP"),
                                    c("SEX","FER", "HHL", "HISPEED", "JWTRNS",
@@ -836,6 +845,17 @@ summary.census <- function(data,
   # By default, summarize all numeric variables (other than PWGTP)
   # and all categorical variables in the tibble
   # User should be able to specify the variables they'd like to summarize
+  if (!all(num_var_vec %in% c("AGEP", "GASP", "GRPIP", "JWAP", 
+                           "JWDP", "JWMNP", "all"))) {
+    
+    stop("Entered an invalid numeric variable to summarize")
+    
+  } else if (!all(cat_var_vec %in% c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", 
+                                     "SCHL", "SEX", "all"))) {
+    
+    stop("Entered an invalid character variable to summarize")
+  }
+  
   if (num_var_vec[1] == "all") {
     # All possible numeric variables, not including the time variables
     num_var_vec <- c("AGEP", "GASP", "GRPIP", "JWMNP")
